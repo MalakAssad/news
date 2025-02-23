@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Results</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+        }
+
+        nav {
+            background-color: #0288d1;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .search-results {
+            background-color: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #0288d1;
+            margin-bottom: 2rem;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .news-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .news-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .news-content {
+            padding: 1rem;
+        }
+
+        .news-content h3 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-content p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .pagination button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="news.html">Latest News</a></li>
+            <li><a href="article.html">Featured</a></li>
+            <li><a href="w.html">weather</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div class="search-results">
+            <h1>Search Results</h1>
+            <div id="news-grid" class="news-grid"></div>
+            <div class="pagination">
+                <button id="prev-page" onclick="changePage(-1)" disabled>Previous</button>
+                <button id="next-page" onclick="changePage(1)">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'iX7V0lUbWAPnbDYlWalLRrLyRpHWAQXQ8XHeviL2';
+        let currentPage = 1;
+        const itemsPerPage = 12;
+
+        async function fetchNews() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchTerm = urlParams.get('search');
+            const newsGrid = document.getElementById('news-grid');
+            
+            try {
+                newsGrid.innerHTML = '<div class="loading">Loading...</div>';
+                
+                const response = await fetch(
+                    `https://api.marketaux.com/v1/news/all?search=${searchTerm}&api_token=${API_KEY}&language=en&limit=${itemsPerPage}&page=${currentPage}`
+                );
+                const data = await response.json();
+                
+                displayNews(data.data);
+                updatePagination(data.meta);
+            } catch (error) {
+                console.error('Error fetching news:', error);
+                newsGrid.innerHTML = '<p>Error loading news. Please try again later.</p>';
+            }
+        }
+
+        function displayNews(news) {
+            const newsGrid = document.getElementById('news-grid');
+            newsGrid.innerHTML = '';
+
+            news.forEach(article => {
+                const card = document.createElement('div');
+                card.className = 'news-card';
+                card.innerHTML = `
+                    <img src="${article.image_url || 'https://via.placeholder.com/300x200'}" alt="${article.title}">
+                    <div class="news-content">
+                        <h3>${article.title}</h3>
+                        <p>${article.description?.substring(0, 100)}...</p>
+                        <div class="news-meta">
+                            <span>${new Date(article.published_at).toLocaleDateString()}</span>
+                            <span>${article.source}</span>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    window.location.href = `article.html?id=${article.uuid}`;
+                });
+                newsGrid.appendChild(card);
+            });
+        }
+
+        function updatePagination(meta) {
+            const prevButton = document.getElementById('prev-page');
+            const nextButton = document.getElementById('next-page');
+            
+            prevButton.disabled = currentPage === 1;
+            nextButton.disabled = currentPage * itemsPerPage >= meta.found;
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            fetchNews();
+            window.scrollTo(0, 0);
+        }
+
+        // Load news when page loads
+        fetchNews();
+    </script>
+</body>
+</html>

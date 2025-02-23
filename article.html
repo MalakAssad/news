@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+        }
+
+        nav {
+            background-color: #0288d1;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .article {
+            background-color: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .article-header {
+            margin-bottom: 2rem;
+        }
+
+        .article-header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .article-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .article-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .article-content {
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .article-content p {
+            margin-bottom: 1rem;
+        }
+
+        .related-links {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #ddd;
+        }
+
+        .related-links h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .related-links ul {
+            list-style: none;
+        }
+
+        .related-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .related-links a {
+            color: #0288d1;
+            text-decoration: none;
+        }
+
+        .related-links a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: #0288d1;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .back-button:hover {
+            background-color: #026aa7;
+        }
+
+        .error-message {
+            color: #d32f2f;
+            text-align: center;
+            padding: 2rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="news.html">Latest News</a></li>
+            <li><a href="article.html">Featured</a></li>
+             <a href="w.html"><i class="fas fa-map-marked-alt"></i> Weather </a>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <a href="javascript:history.back()" class="back-button">← Back</a>
+        <div id="article" class="article">
+            <div class="loading">Loading article...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'iX7V0lUbWAPnbDYlWalLRrLyRpHWAQXQ8XHeviL2';
+
+        async function fetchArticle() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const articleId = urlParams.get('id');
+            
+            if (!articleId) {
+                displayError('No article ID provided');
+                return;
+            }
+
+            try {
+                const url = `https://api.marketaux.com/v1/news/uuid/${articleId}?api_token=${API_KEY}`;
+                console.log('Fetching article from:', url);
+
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+
+                const text = await response.text();
+                console.log('Response text:', text);
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('Failed to parse JSON: ' + e.message);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${data.error?.message || 'Unknown error'}`);
+                }
+
+                if (data.error) {
+                    throw new Error(data.error.message || 'API returned an error');
+                }
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('No article data found');
+                }
+
+                displayArticle(data.data[0]);
+            } catch (error) {
+                console.error('Error fetching article:', error);
+                displayError(`Unable to load the article. Error details:\n${error.message}`);
+            }
+        }
+
+        function displayArticle(article) {
+            const articleElement = document.getElementById('article');
+            
+            document.title = `${article.title} - Financial News`;
+            
+            articleElement.innerHTML = `
+                <div class="article-header">
+                    <h1>${article.title}</h1>
+                    <div class="article-meta">
+                        <span>Published: ${new Date(article.published_at).toLocaleDateString()}</span>
+                        <span>Source: ${article.source}</span>
+                    </div>
+                </div>
+                ${article.image_url ? `<img src="${article.image_url}" alt="${article.title}" class="article-image">` : ''}
+                <div class="article-content">
+                    <p>${article.description || ''}</p>
+                    ${article.content ? `<p>${article.content}</p>` : ''}
+                    <a href="${article.url}" target="_blank" rel="noopener noreferrer">Read full article at source</a>
+                </div>
+                ${article.entities && article.entities.length > 0 ? `
+                    <div class="related-links">
+                        <h2>Related Topics</h2>
+                        <ul>
+                            ${article.entities.map(entity => 
+                                `<li><a href="news.html?search=${encodeURIComponent(entity.name)}">${entity.name}</a></li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function displayError(message) {
+            const articleElement = document.getElementById('article');
+            articleElement.innerHTML = `
+                <div class="error-message">
+                    <h2>Error</h2>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Load article when page loads
+        fetchArticle();
+    </script>
+</body>
+</html>

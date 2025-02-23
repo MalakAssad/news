@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Maps - WeatherApp</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        /* Include the styles from the previous example */
+
+        .main-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .map-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            flex-grow: 1;
+            border-radius: 10px;
+        }
+
+        .map-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .map-btn {
+            padding: 0.5rem 1rem;
+            background: #ffd700;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .map-btn:hover, .map-btn.active {
+            background: #ffed4a;
+            transform: translateY(-2px);
+        }
+
+        .legend {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .search-container input {
+            flex-grow: 1;
+            padding: 5px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .search-container button {
+            padding: 5px 10px;
+            background: #ffd700;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Include the navigation bar from the previous example -->
+
+    <div class="main-container">
+        <h1>Weather Maps</h1>
+        <div class="map-container">
+            <div class="search-container">
+                <input type="text" id="location-input" placeholder="Enter a location">
+                <button onclick="searchLocation()">Search</button>
+            </div>
+            <div id="map"></div>
+            <div class="map-controls">
+                <button class="map-btn active" onclick="changeMapLayer('temp_new')">Temperature</button>
+                <button class="map-btn" onclick="changeMapLayer('precipitation_new')">Precipitation</button>
+                <button class="map-btn" onclick="changeMapLayer('wind_new')">Wind</button>
+                <button class="map-btn" onclick="changeMapLayer('clouds_new')">Clouds</button>
+                <button class="map-btn" onclick="changeMapLayer('pressure_new')">Pressure</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'e49571556c69509d79770a34486ed86b';
+        let map;
+        let currentLayer;
+        let legend;
+
+        function initMap() {
+            map = L.map('map').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            legend = L.control({ position: 'bottomright' });
+            legend.onAdd = function (map) {
+                let div = L.DomUtil.create('div', 'legend');
+                return div;
+            };
+            legend.addTo(map);
+
+            changeMapLayer('temp_new');
+        }
+
+        function changeMapLayer(layerType) {
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+
+            document.querySelectorAll('.map-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[onclick="changeMapLayer('${layerType}')"]`).classList.add('active');
+
+            const layerUrl = `https://tile.openweathermap.org/map/${layerType}/{z}/{x}/{y}.png?appid=${API_KEY}`;
+            currentLayer = L.tileLayer(layerUrl, {
+                maxZoom: 18,
+                attribution: 'Map data &copy; <a href="https://openweathermap.org">OpenWeatherMap</a>',
+                opacity: 0.7
+            }).addTo(map);
+
+            updateLegend(layerType);
+        }
+
+        function updateLegend(layerType) {
+            let legendContent = '';
+            switch (layerType) {
+                case 'temp_new':
+                    legendContent = `
+                        <h4>Temperature (°C)</h4>
+                        <div class="legend-item"><div class="legend-color" style="background: #f00"></div> > 30</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #ff0"></div> 20 - 30</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #0f0"></div> 10 - 20</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #0ff"></div> 0 - 10</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #00f"></div> < 0</div>
+                    `;
+                    break;
+                case 'precipitation_new':
+                    legendContent = `
+                        <h4>Precipitation (mm)</h4>
+                        <div class="legend-item"><div class="legend-color" style="background: #f00"></div> > 20</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #ff0"></div> 10 - 20</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #0f0"></div> 5 - 10</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #0ff"></div> 1 - 5</div>
+                        <div class="legend-item"><div class="legend-color" style="background: #00f"></div> < 1</div>
+                    `;
+                    break;
+                // Add more cases for other layer types
+            }
+            legend.getContainer().innerHTML = legendContent;
+        }
+
+        async function searchLocation() {
+            const location = document.getElementById('location-input').value;
+            if (!location) return;
+
+            try {
+                const response = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${location}&limit=1&appid=${API_KEY}`);
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    const { lat, lon } = data[0];
+                    map.setView([lat, lon], 10);
+                } else {
+                    alert('Location not found. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while searching for the location. Please try again.');
+            }
+        }
+
+        // Initialize the map when the page loads
+        window.addEventListener('load', initMap);
+
+        // Add event listener for the Enter key in the search input
+        document.getElementById('location-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchLocation();
+            }
+        });
+    </script>
+</body>
+</html>
